@@ -29,15 +29,17 @@ export interface RowsPage {
   limit: number
 }
 
+interface Envelope<T> { success: boolean; data: T }
+
 export const datasetsService = {
   list: (page = 1, limit = 20) =>
-    api.get<DatasetsPage>('/datasets', { params: { page, limit } }).then((r) => r.data),
+    api.get<Envelope<DatasetsPage>>('/datasets', { params: { page, limit } }).then((r) => r.data.data),
 
   get: (id: string) =>
-    api.get<DatasetAPI>(`/datasets/${id}`).then((r) => r.data),
+    api.get<Envelope<DatasetAPI>>(`/datasets/${id}`).then((r) => r.data.data),
 
   rows: (id: string, page = 1, limit = 50) =>
-    api.get<RowsPage>(`/datasets/${id}/rows`, { params: { page, limit } }).then((r) => r.data),
+    api.get<Envelope<RowsPage>>(`/datasets/${id}/rows`, { params: { page, limit } }).then((r) => r.data.data),
 
   upload: (file: File, meta: Partial<Dataset>) => {
     const form = new FormData()
@@ -46,13 +48,13 @@ export const datasetsService = {
     if (meta.topic) form.append('topic', meta.topic)
     if (meta.description) form.append('description', meta.description)
     if (meta.color) form.append('color', meta.color)
-    return api.post<DatasetAPI>('/datasets', form, {
+    return api.post<Envelope<DatasetAPI>>('/datasets', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
-    }).then((r) => r.data)
+    }).then((r) => r.data.data)
   },
 
   update: (id: string, patch: Partial<Dataset>) =>
-    api.patch<DatasetAPI>(`/datasets/${id}`, patch).then((r) => r.data),
+    api.patch<Envelope<DatasetAPI>>(`/datasets/${id}`, patch).then((r) => r.data.data),
 
   remove: (id: string) =>
     api.delete(`/datasets/${id}`).then((r) => r.data),

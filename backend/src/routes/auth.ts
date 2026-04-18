@@ -64,7 +64,7 @@ router.post('/login', async (req: Request, res: Response) => {
     success: true,
     data: {
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role.toLowerCase() },
     },
   })
 })
@@ -75,7 +75,8 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
     where: { id: req.user!.userId },
     select: { id: true, name: true, email: true, role: true, createdAt: true },
   })
-  res.json({ success: true, data: user })
+  if (!user) { res.status(404).json({ success: false, error: 'Usuario no encontrado' }); return }
+  res.json({ success: true, data: { ...user, role: user.role.toLowerCase() } })
 })
 
 export default router
