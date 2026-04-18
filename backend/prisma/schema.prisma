@@ -1,0 +1,93 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  datasets   Dataset[]
+  dashboards Dashboard[]
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  VIEWER
+}
+
+// ── Dataset ───────────────────────────────────────────────────────────────────
+
+model Dataset {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  topic       String
+  color       String        @default("#6366F1")
+  icon        String        @default("Database")
+  status      DatasetStatus @default(DRAFT)
+  rowCount    Int           @default(0)
+  fileKey     String?       // stored file path
+  columns     Json          // Column[] serialized
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  owner   User   @relation(fields: [ownerId], references: [id])
+  ownerId String
+
+  dashboards Dashboard[]
+  rows       DataRow[]
+
+  @@map("datasets")
+}
+
+enum DatasetStatus {
+  PUBLISHED
+  DRAFT
+}
+
+model DataRow {
+  id        String   @id @default(cuid())
+  data      Json
+  createdAt DateTime @default(now())
+
+  dataset   Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  datasetId String
+
+  @@index([datasetId])
+  @@map("data_rows")
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+
+model Dashboard {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  widgets     Json     // Widget[] serialized
+  filters     Json?    // FilterDef[] serialized
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  dataset   Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  datasetId String
+
+  owner   User   @relation(fields: [ownerId], references: [id])
+  ownerId String
+
+  @@map("dashboards")
+}
