@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, Database, LayoutDashboard, Table2, Settings,
   Plus, Trash2, Eye, Save, TrendingUp,
   BarChart2, PieChart, LineChart, Hash, AlignLeft, Calendar,
   GripVertical, X, Check, Loader2,
 } from 'lucide-react'
+import { datasetsService } from '@/lib/services/datasets'
+import { dashboardsService } from '@/lib/services/dashboards'
 import { DATASETS, DASHBOARDS } from '@/lib/mockData'
-import type { Widget, WidgetType } from '@/lib/types'
+import type { Widget, WidgetType, Dataset, Dashboard } from '@/lib/types'
 
 type Tab = 'schema' | 'dashboard' | 'settings'
 
@@ -27,14 +30,45 @@ const TYPE_ICON: Record<string, React.ElementType> = {
 
 export default function DatasetDetail() {
   const { id } = useParams<{ id: string }>()
-  const ds = DATASETS.find(d => d.id === id)
-  const dash = DASHBOARDS.find(d => d.datasetId === id)
+  const qc = useQueryClient()
+
+  const { data: dsData, isLoading: dsLoading } = useQuery({
+    queryKey: ['datasets', id],
+    queryFn: () => datasetsService.get(id!),
+    enabled: !!id,
+  })
+  const { data: dashData } = useQuery({
+    queryKey: ['dashboards'],
+    queryFn: () => dashboardsService.list(),
+  })
+
+  const ds: Dataset | undefined = (dsData as Dataset | undefined) ?? DATASETS.find(d => d.id === id)
+  const dash: Dashboard | undefined = (Array.isArray(dashData)
+    ? (dashData as Dashboard[]).find(d => d.datasetId === id)
+    : undefined) ?? DASHBOARDS.find(d => d.datasetId === id)
 
   const [tab, setTab] = useState<Tab>('schema')
   const [widgets, setWidgets] = useState<Widget[]>(dash?.widgets ?? [])
   const [showAddWidget, setShowAddWidget] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  const saveMutation = useMutation({
+    mutationFn: () => {
+      if (dash?.id) return dashboardsService.update(dash.id, { widgets })
+      return dashboardsService.create({ datasetId: id!, title: ds?.name ?? 'Dashboard', description: '', widgets })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['dashboards'] })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    },
+  })
+
+  if (dsLoading) return (
+    <div className="flex items-center justify-center h-full gap-2 text-[var(--color-muted)] text-sm">
+      <Loader2 className="w-4 h-4 animate-spin" /> Cargando…
+    </div>
+  )
 
   if (!ds) return (
     <div className="flex items-center justify-center h-full text-[var(--color-muted)] text-sm">
@@ -42,14 +76,7 @@ export default function DatasetDetail() {
     </div>
   )
 
-  const handleSave = () => {
-    setSaving(true)
-    setTimeout(() => {
-      setSaving(false)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    }, 900)
-  }
+  const handleSave = () => saveMutation.mutate()
 
   const addWidget = (type: WidgetType) => {
     const id = `w${Date.now()}`
@@ -109,8 +136,8 @@ export default function DatasetDetail() {
           <button onClick={handleSave}
             className="flex items-center gap-1.5 h-9 px-4 rounded-lg text-[0.75rem] font-semibold text-white transition-all hover:brightness-110"
             style={{ background: saved ? 'linear-gradient(135deg, #22D3A5, #10B981)' : 'linear-gradient(135deg, #6366F1, #7C3AED)', boxShadow: '0 2px 12px rgba(99,102,241,0.2)' }}>
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : saved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
-            {saving ? 'Guardando…' : saved ? 'Guardado' : 'Guardar cambios'}
+            {saveMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : saved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+            {saveMutation.isPending ? 'Guardando…' : saved ? 'Guardado' : 'Guardar cambios'}
           </button>
         </div>
       </div>

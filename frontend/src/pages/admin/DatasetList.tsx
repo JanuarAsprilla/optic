@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useQuery } from '@tanstack/react-query'
 import {
   Plus, Search, Database, BarChart2, TrendingUp,
-  Users, Leaf, DollarSign, Settings, Eye,
+  Users, Leaf, DollarSign, Settings, Eye, Loader2,
 } from 'lucide-react'
+import { datasetsService } from '@/lib/services/datasets'
 import { DATASETS } from '@/lib/mockData'
 import type { Dataset } from '@/lib/types'
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, React.ElementType> = {
   TrendingUp, Users, Leaf, DollarSign, BarChart2, Database,
 }
 
@@ -16,7 +18,14 @@ export default function DatasetList() {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'published' | 'draft'>('all')
 
-  const filtered = DATASETS.filter(ds => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['datasets'],
+    queryFn: () => datasetsService.list(1, 100),
+  })
+
+  const source: Dataset[] = (data?.data as Dataset[] | undefined) ?? DATASETS
+
+  const filtered = source.filter(ds => {
     const q = query.toLowerCase()
     const matchSearch = !q || ds.name.toLowerCase().includes(q) || ds.topic.toLowerCase().includes(q)
     const matchStatus = filter === 'all' || ds.status === filter
@@ -25,6 +34,11 @@ export default function DatasetList() {
 
   return (
     <div className="p-6 lg:p-8 max-w-[1200px] mx-auto space-y-6">
+      {isLoading && (
+        <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Cargando datasets…
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">

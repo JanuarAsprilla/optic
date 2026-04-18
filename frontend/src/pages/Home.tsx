@@ -1,11 +1,15 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useQuery } from '@tanstack/react-query'
 import {
   LayoutDashboard, Database, ArrowRight, TrendingUp,
   Users, Leaf, DollarSign, Clock, Eye, BarChart2,
 } from 'lucide-react'
+import { datasetsService } from '@/lib/services/datasets'
+import { dashboardsService } from '@/lib/services/dashboards'
 import { DATASETS, DASHBOARDS } from '@/lib/mockData'
 import { fmtDate } from '@/lib/utils'
+import type { Dataset, Dashboard } from '@/lib/types'
 
 const ICON_MAP: Record<string, any> = {
   TrendingUp, Users, Leaf, DollarSign, BarChart2,
@@ -17,6 +21,18 @@ const STATUS_CHIP = {
 }
 
 export default function Home() {
+  const { data: dsData } = useQuery({
+    queryKey: ['datasets'],
+    queryFn: () => datasetsService.list(1, 100),
+  })
+  const { data: dashData } = useQuery({
+    queryKey: ['dashboards'],
+    queryFn: () => dashboardsService.list(),
+  })
+
+  const datasets: Dataset[] = (dsData?.data as Dataset[] | undefined) ?? DATASETS
+  const dashboards: Dashboard[] = (dashData as Dashboard[] | undefined) ?? DASHBOARDS
+
   return (
     <div className="p-6 lg:p-8 space-y-10 max-w-[1400px] mx-auto">
 
@@ -48,18 +64,18 @@ export default function Home() {
           </div>
           <div className="flex gap-3 shrink-0">
             <div className="text-center">
-              <p className="text-2xl font-bold text-white font-mono">{DATASETS.length}</p>
+              <p className="text-2xl font-bold text-white font-mono">{datasets.length}</p>
               <p className="text-[0.65rem] text-white/40 uppercase tracking-wider">Datasets</p>
             </div>
             <div className="w-px bg-white/10" />
             <div className="text-center">
-              <p className="text-2xl font-bold text-white font-mono">{DASHBOARDS.length}</p>
+              <p className="text-2xl font-bold text-white font-mono">{dashboards.length}</p>
               <p className="text-[0.65rem] text-white/40 uppercase tracking-wider">Dashboards</p>
             </div>
             <div className="w-px bg-white/10" />
             <div className="text-center">
               <p className="text-2xl font-bold text-white font-mono">
-                {DATASETS.reduce((s, d) => s + d.rowCount, 0).toLocaleString('es-CO')}
+                {datasets.reduce((s, d) => s + d.rowCount, 0).toLocaleString('es-CO')}
               </p>
               <p className="text-[0.65rem] text-white/40 uppercase tracking-wider">Registros</p>
             </div>
@@ -68,12 +84,12 @@ export default function Home() {
       </motion.div>
 
       {/* Dashboards section */}
-      {DASHBOARDS.length > 0 && (
+      {dashboards.length > 0 && (
         <section>
           <SectionHeader icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboards publicados" to="/explorar" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-            {DASHBOARDS.map((dash, i) => {
-              const ds = DATASETS.find(d => d.id === dash.datasetId)
+            {dashboards.map((dash, i) => {
+              const ds = datasets.find(d => d.id === dash.datasetId)
               return (
                 <motion.div
                   key={dash.id}
@@ -117,7 +133,7 @@ export default function Home() {
       <section>
         <SectionHeader icon={<Database className="w-4 h-4" />} label="Datasets disponibles" to="/admin/datasets" actionLabel="Gestionar" />
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-4">
-          {DATASETS.map((ds, i) => {
+          {datasets.map((ds, i) => {
             const Icon = ICON_MAP[ds.icon] ?? BarChart2
             return (
               <motion.div

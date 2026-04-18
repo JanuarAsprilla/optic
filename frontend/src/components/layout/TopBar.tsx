@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Menu, Search, Bell, Plus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAppStore } from '@/stores/appStore'
+import { useAuthStore } from '@/stores/authStore'
 
 const ROUTE_LABELS: Record<string, string> = {
   '/':                   'Dashboards',
@@ -19,7 +19,7 @@ interface Props { onMenuClick: () => void }
 
 export default function TopBar({ onMenuClick }: Props) {
   const { pathname } = useLocation()
-  const { user } = useAppStore()
+  const { user } = useAuthStore()
   const [searchOpen, setSearchOpen] = useState(false)
 
   const label = Object.entries(ROUTE_LABELS)

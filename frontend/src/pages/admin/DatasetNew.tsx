@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, Upload, FileSpreadsheet, X, Check, AlertCircle,
   FileText, ChevronRight, Loader2,
 } from 'lucide-react'
+import { datasetsService } from '@/lib/services/datasets'
 
 type Step = 'upload' | 'preview' | 'configure' | 'done'
 
@@ -25,11 +27,14 @@ const ACCENT_COLORS = [
 ]
 
 export default function DatasetNew() {
+  const navigate = useNavigate()
+  const qc = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState<Step>('upload')
   const [dragging, setDragging] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [columns, setColumns] = useState<ParsedColumn[]>([])
   const [form, setForm] = useState({
     name: '',
@@ -67,12 +72,20 @@ export default function DatasetNew() {
     if (f) handleFile(f)
   }, [handleFile])
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!file) return
     setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
+    setUploadError(null)
+    try {
+      await datasetsService.upload(file, { name: form.name, topic: form.topic, description: form.description, color: form.color })
+      await qc.invalidateQueries({ queryKey: ['datasets'] })
       setStep('done')
-    }, 1500)
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Error al subir el archivo'
+      setUploadError(msg)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -318,6 +331,12 @@ export default function DatasetNew() {
               </div>
             </div>
 
+            {uploadError && (
+              <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                <AlertCircle size={14} className="shrink-0" />{uploadError}
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <button onClick={() => setStep('preview')}
                 className="flex items-center gap-1.5 h-9 px-4 rounded-lg text-[0.8rem] font-medium border border-[rgba(255,255,255,0.08)] text-[var(--color-muted)] hover:text-[var(--color-text)] hover:bg-white/[0.04] transition-colors">
@@ -355,7 +374,7 @@ export default function DatasetNew() {
                 Ver datasets
               </Link>
               <Link to="/admin/datasets/new"
-                onClick={() => { setStep('upload'); setFile(null); setColumns([]) }}
+                onClick={() => { setStep('upload'); setFile(null); setColumns([]); setUploadError(null) }}
                 className="flex items-center gap-1.5 h-9 px-5 rounded-lg text-[0.8rem] font-semibold text-white no-underline transition-all hover:brightness-110"
                 style={{ background: 'linear-gradient(135deg, #6366F1, #7C3AED)', boxShadow: '0 2px 16px rgba(99,102,241,0.25)' }}>
                 Importar otro

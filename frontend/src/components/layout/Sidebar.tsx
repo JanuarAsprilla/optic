@@ -4,7 +4,8 @@ import {
   LayoutDashboard, Database, Settings, ChevronRight,
   Layers, Users, BarChart2, FileUp, HelpCircle, X,
 } from 'lucide-react'
-import { useAppStore } from '@/stores/appStore'
+import { useAuthStore } from '@/stores/authStore'
+import { LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV = [
@@ -31,7 +32,7 @@ const NAV = [
 interface Props { mobile?: boolean; onClose?: () => void }
 
 export default function Sidebar({ mobile, onClose }: Props) {
-  const { user } = useAppStore()
+  const { user, logout } = useAuthStore()
   const location = useLocation()
 
   return (
@@ -99,8 +100,8 @@ export default function Sidebar({ mobile, onClose }: Props) {
       </nav>
 
       {/* Footer */}
-      <div className="shrink-0 p-3 border-t border-[rgba(255,255,255,0.05)]">
-        <button className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-white/[0.04] transition-colors group">
+      <div className="shrink-0 p-3 border-t border-[rgba(255,255,255,0.05)] space-y-1">
+        <div className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg group">
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shrink-0 text-[10px] font-bold text-white">
             {user?.name?.[0] ?? 'A'}
           </div>
@@ -109,6 +110,13 @@ export default function Sidebar({ mobile, onClose }: Props) {
             <p className="text-[0.65rem] text-[var(--color-muted)] truncate">{user?.email}</p>
           </div>
           <HelpCircle className="w-3.5 h-3.5 text-[var(--color-muted)] group-hover:text-[var(--color-text)] transition-colors shrink-0" />
+        </div>
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-red-500/10 text-[var(--color-muted)] hover:text-red-400 transition-colors text-[0.8rem]"
+        >
+          <LogOut className="w-3.5 h-3.5 shrink-0" />
+          Cerrar sesión
         </button>
       </div>
     </aside>
